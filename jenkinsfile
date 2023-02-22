@@ -1,0 +1,57 @@
+pipeline {
+  agent {
+      label 'node2'
+    }
+  parameters {
+    gitParameter branchFilter: 'origin/(.*)', defaultValue: 'master', name: 'BRANCH', type: 'PT_BRANCH', useRepository: 'https://kavithakhola@bitbucket.org/buznear/kmsapi.git'
+}
+  stages {
+    stage('Gitclone') {
+     steps {
+       git branch: "${params.BRANCH}", credentialsId: '25bb3dcd-fdff-40f8-ac2a-0f2c0ea1d4e1', url: 'https://kavithakhola@bitbucket.org/buznear/kmsapi.git'
+     }
+  }
+
+    stage('Build') {
+     steps {
+       sh "mvn clean install"
+    }
+  }
+  
+  
+    stage('Upload to S3') {
+      steps {
+        // Upload the deployment package to S3
+        sh 'aws s3 cp target/kmsapi-1.0.0.jar s3://bucketest321/bucketest/kmsapi-1.0.0.jar'
+      }
+    }
+
+    /*stage('Sonarqube') {
+          steps {
+              withSonarQubeEnv('Sonarqube') {
+                 sh 'mvn clean package sonar:sonar'
+              }
+          }
+      }*/
+
+    stage('Deploy on AWS through Code Deploy on kavitha/ER branch') {
+     //when {
+       //branch "feature/kavitha/ER-23.03.23" 
+      //}
+     steps {
+        step([$class: 'AWSCodeDeployPublisher', applicationName: 'buznear-appli', awsAccessKey: '', awsSecretKey: '', credentials: 'access&secretekey', deploymentGroupAppspec: false, deploymentGroupName: 'buznear-DG', deploymentMethod: 'deploy',deploymentConfig: 'CodeDeployDefault.OneAtATime', excludes: '', iamRoleArn: '', includes: '**', proxyHost: '', proxyPort: 0, region: 'ap-south-1', s3bucket: 'bucketest321', s3prefix: 'bucketest', subdirectory: '', versionFileName: '', waitForCompletion: true])
+        //sh 'aws s3 cp target/*.zip s3://buckettest321/bucketest/*.zip'
+     } 
+     
+    } 
+
+   }
+ 
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}
+
+
